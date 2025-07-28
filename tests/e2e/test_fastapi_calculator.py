@@ -130,6 +130,19 @@ def test_user_login(base_url: str):
     assert current_time.tzinfo is not None, "current_time should be timezone-aware"
     assert expires_at > current_time, "Token expiration should be in the future"
 
+def test_register_short_password(base_url: str):
+    url = f"{base_url}/auth/register"
+    payload = {
+        "first_name": "Short",
+        "last_name": "Password",
+        "email": "short.password@example.com",
+        "username": "shortpassword",
+        "password": "short",
+        "confirm_password": "short"
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 422, f"Expected 422 for short password registration, got {response.status_code}: {response.text}"
+
 # ---------------------------------------------------------------------------
 # Calculations Endpoints Integration Tests
 # ---------------------------------------------------------------------------
