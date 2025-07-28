@@ -26,6 +26,13 @@ docker compose up --build
 
 Go to `http://localhost:8000` in your browser.
 
+Login
+![image](images/module_13_login.png)
+
+Registration
+
+![image](images/module_13_registration.png)
+
 ## Testing Commands
 
 ### Unit and Integration Tests
@@ -58,4 +65,10 @@ The Playwright end-to-end tests cover:
 - Form validation and error handling
 - Responsive design on different screen sizes
 - Complete user journey workflows
+
+Playwright Tests
+![image](images/module_13_playwright_tests.png)
+
+GitHub Action Workflow
+![image](images/module_13_github_actions.png)
 
