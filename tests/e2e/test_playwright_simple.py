@@ -145,6 +145,26 @@ class TestE2ECalculatorApp:
         # Check for error message or that we're still on login page
         current_url = page.url
         assert "/login" in current_url  # Should still be on login page
+
+    def test_registration_with_short_password(self, page: Page):
+        """Test registration with a short password."""
+        page.goto(f"{self.BASE_URL}/register")
+        
+        # Fill registration form with short password
+        page.fill("#username", "shortpass_user")
+        page.fill("#email", "shortpass_user@example.com")
+        page.fill("#first_name", "Short")
+        page.fill("#last_name", "Password")
+        page.fill("#password", "short")
+        page.fill("#confirm_password", "short")
+        page.click("button[type='submit']")
+        page.wait_for_timeout(2000)
+        # Check for error message
+        error_alert = page.locator("#errorAlert")
+        expect(error_alert).to_be_visible() 
+        expect(error_alert).to_contain_text("Password must be at least 8 characters long")
+        # Ensure we're still on the registration page
+        expect(page).to_have_url(f"{self.BASE_URL}/register")
     
     def test_dashboard_requires_auth(self, page: Page):
         """Test that dashboard requires authentication."""
@@ -261,3 +281,4 @@ class TestE2ECompleteWorkflow:
         # Verify we're somewhere valid (not necessarily dashboard, depending on auth setup)
         current_url = page.url
         assert self.BASE_URL in current_url
+    
