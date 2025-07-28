@@ -220,6 +220,11 @@
                 return;
             }
 
+            if (inputs.slice(1).some(num => num === 0 && document.getElementById('calcType').value === 'division')) {
+                showError('Division by zero is not allowed');
+                return;
+            }
+
             const calculationData = {
                 type: document.getElementById('calcType').value,
                 inputs: inputs
