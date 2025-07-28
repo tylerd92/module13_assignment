@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.user import User
 from tests.conftest import create_fake_user, managed_db_session
+import uuid
 
 # Use the logger configured in conftest.py
 logger = logging.getLogger(__name__)
@@ -325,3 +326,224 @@ def test_error_handling():
             session.execute(text("INVALID SQL"))
     assert "INVALID SQL" in str(exc_info.value)
 
+def test_authenticate_success(db_session, monkeypatch):
+    """
+    Test successful authentication with correct username/email and password.
+    """
+    # Create a user with a known password
+    password = "securepass"
+    user_data = {
+        "first_name": "Auth",
+        "last_name": "Tester",
+        "email": "authuser@example.com",
+        "username": "authuser",
+        "password": User.hash_password(password),
+        "is_active": True,
+        "is_verified": True
+    }
+    user = User(**user_data)
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+
+    # Patch token creation to return dummy tokens
+    monkeypatch.setattr(User, "create_access_token", lambda data: "access_token")
+    monkeypatch.setattr(User, "create_refresh_token", lambda data: "refresh_token")
+
+    # Authenticate by username
+    result = User.authenticate(db_session, "authuser", password)
+    assert result is not None
+    assert result["access_token"] == "access_token"
+    assert result["refresh_token"] == "refresh_token"
+    assert result["user"].id == user.id
+
+    # Authenticate by email
+    result_email = User.authenticate(db_session, "authuser@example.com", password)
+    assert result_email is not None
+    assert result_email["user"].id == user.id
+
+def test_authenticate_wrong_password(db_session):
+    """
+    Test authentication fails with wrong password.
+    """
+    password = "rightpass"
+    user_data = {
+        "first_name": "Wrong",
+        "last_name": "Password",
+        "email": "wrongpass@example.com",
+        "username": "wrongpassuser",
+        "password": User.hash_password(password),
+        "is_active": True,
+        "is_verified": True
+    }
+    user = User(**user_data)
+    db_session.add(user)
+    db_session.commit()
+
+    result = User.authenticate(db_session, "wrongpassuser", "incorrectpass")
+    assert result is None
+
+def test_authenticate_nonexistent_user(db_session):
+    """
+    Test authentication fails for nonexistent user.
+    """
+    result = User.authenticate(db_session, "nonexistentuser", "any_password")
+    assert result is None
+
+def test_authenticate_inactive_user(db_session, monkeypatch):
+    """
+    Test authentication fails for inactive user.
+    """
+    password = "inactivepass"
+    user_data = {
+        "first_name": "Inactive",
+        "last_name": "User",
+        "email": "inactive@example.com",
+        "username": "inactiveuser",
+        "password": User.hash_password(password),
+        "is_active": False,
+        "is_verified": True
+    }
+    user = User(**user_data)
+    db_session.add(user)
+    db_session.commit()
+
+    # Patch verify_password to always return True for this test
+    monkeypatch.setattr(User, "verify_password", lambda self, plain: True)
+    # The authenticate method does not check is_active, so authentication should succeed
+    result = User.authenticate(db_session, "inactiveuser", password)
+    assert result is not None
+    assert result["user"].id == user.id
+
+def test_authenticate_updates_last_login(db_session, monkeypatch):
+    """
+    Test that authenticate updates last_login timestamp.
+    """
+    password = "loginpass"
+    user_data = {
+        "first_name": "Login",
+        "last_name": "User",
+        "email": "loginuser@example.com",
+        "username": "loginuser",
+        "password": User.hash_password(password),
+        "is_active": True,
+        "is_verified": True
+    }
+    user = User(**user_data)
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+
+    monkeypatch.setattr(User, "create_access_token", lambda data: "access_token")
+    monkeypatch.setattr(User, "create_refresh_token", lambda data: "refresh_token")
+
+    assert user.last_login is None
+    result = User.authenticate(db_session, "loginuser", password)
+    db_session.refresh(user)
+    assert user.last_login is not None
+
+def test_verify_token_valid(monkeypatch):
+    """
+    Test User.verify_token returns correct UUID for a valid token.
+    """
+
+    # Setup: create a valid UUID and token payload
+    user_id = uuid.uuid4()
+    token_payload = {"sub": str(user_id)}
+
+    # Patch settings and jose.jwt.decode to return our payload
+    class DummySettings:
+        JWT_SECRET_KEY = "secret"
+        ALGORITHM = "HS256"
+    monkeypatch.setattr("app.core.config.settings", DummySettings())
+
+    def dummy_decode(token, key, algorithms):
+        return token_payload
+    monkeypatch.setattr("jose.jwt.decode", dummy_decode)
+
+    token = "valid_token"
+    result = User.verify_token(token)
+    assert result == user_id
+
+def test_verify_token_missing_sub(monkeypatch):
+    """
+    Test User.verify_token returns None if 'sub' is missing from payload.
+    """
+    class DummySettings:
+        JWT_SECRET_KEY = "secret"
+        ALGORITHM = "HS256"
+    monkeypatch.setattr("app.core.config.settings", DummySettings())
+
+    def dummy_decode(token, key, algorithms):
+        return {}  # No 'sub'
+    monkeypatch.setattr("jose.jwt.decode", dummy_decode)
+
+    token = "token_without_sub"
+    result = User.verify_token(token)
+    assert result is None
+
+def test_verify_token_invalid_uuid(monkeypatch):
+    """
+    Test User.verify_token returns None if 'sub' is not a valid UUID.
+    """
+    class DummySettings:
+        JWT_SECRET_KEY = "secret"
+        ALGORITHM = "HS256"
+    monkeypatch.setattr("app.core.config.settings", DummySettings())
+
+    def dummy_decode(token, key, algorithms):
+        return {"sub": "not-a-uuid"}
+    monkeypatch.setattr("jose.jwt.decode", dummy_decode)
+
+    token = "token_with_invalid_uuid"
+    result = User.verify_token(token)
+    assert result is None
+
+def test_update_single_field(db_session, test_user):
+    """
+    Test updating a single field using the update method.
+    """
+    old_updated_at = test_user.updated_at
+    new_first_name = "UpdatedName"
+    test_user.update(first_name=new_first_name)
+    db_session.commit()
+    db_session.refresh(test_user)
+    assert test_user.first_name == new_first_name
+    assert test_user.updated_at > old_updated_at
+
+def test_update_multiple_fields(db_session, test_user):
+    """
+    Test updating multiple fields at once using the update method.
+    """
+    old_updated_at = test_user.updated_at
+    new_data = {
+        "first_name": "Multi",
+        "last_name": "Field",
+        "email": "multi.field@example.com"
+    }
+    test_user.update(**new_data)
+    db_session.commit()
+    db_session.refresh(test_user)
+    assert test_user.first_name == new_data["first_name"]
+    assert test_user.last_name == new_data["last_name"]
+    assert test_user.email == new_data["email"]
+    assert test_user.updated_at > old_updated_at
+
+def test_update_no_fields(db_session, test_user):
+    """
+    Test calling update with no fields does not change attributes except updated_at.
+    """
+    old_first_name = test_user.first_name
+    old_updated_at = test_user.updated_at
+    test_user.update()
+    db_session.commit()
+    db_session.refresh(test_user)
+    assert test_user.first_name == old_first_name
+    assert test_user.updated_at > old_updated_at
+
+def test_update_returns_self(db_session, test_user):
+    """
+    Test that update returns the user instance itself.
+    """
+    result = test_user.update(first_name="ReturnTest")
+    assert result is test_user

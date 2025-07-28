@@ -135,12 +135,28 @@ def test_invalid_inputs_for_addition():
     with pytest.raises(ValueError, match="Inputs must be a list of numbers."):
         addition.get_result()
 
+def test_invalid_inputs_for_addition_short_list():
+    """
+    Test that providing a list with fewer than two numbers to Addition.get_result raises a ValueError.
+    """
+    addition = Addition(user_id=dummy_user_id(), inputs=[5])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers."):
+        addition.get_result()
+
 def test_invalid_inputs_for_subtraction():
     """
     Test that providing fewer than two numbers to Subtraction.get_result raises a ValueError.
     """
     subtraction = Subtraction(user_id=dummy_user_id(), inputs=[10])
     with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers."):
+        subtraction.get_result()
+
+def test_not_list_as_input_for_subtraction():
+    """
+    Test that providing a non-list input to Subtraction.get_result raises a ValueError.
+    """
+    subtraction = Subtraction(user_id=dummy_user_id(), inputs="test")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers."):
         subtraction.get_result()
 
 def test_invalid_inputs_for_division():
@@ -150,3 +166,26 @@ def test_invalid_inputs_for_division():
     division = Division(user_id=dummy_user_id(), inputs=[10])
     with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers."):
         division.get_result()
+
+def test_not_list_as_input_for_division():
+    """
+    Test that providing a non-list input to Division.get_result raises a ValueError.
+    """
+    division = Division(user_id=dummy_user_id(), inputs="not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers."):
+        division.get_result()
+
+def test_short_list_for_multiplication():
+    """
+    Test that providing a list with fewer than two numbers to Multiplication.get_result raises a ValueError.
+    """
+    multiplication = Multiplication(user_id=dummy_user_id(), inputs=[3])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers."):
+        multiplication.get_result()
+
+def test_invalid_list_for_multiplication():
+    """
+    Test that providing a non-list input to Multiplication.get_result raises a ValueError."""
+    multiplication = Multiplication(user_id=dummy_user_id(), inputs="test")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers."):
+        multiplication.get_result()
