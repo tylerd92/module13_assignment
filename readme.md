@@ -24,7 +24,7 @@ Run docker compose:
 docker compose up --build
 ```
 
-Go to `http://localhost:8001` in your browser.
+Go to `http://localhost:8000` in your browser.
 
 ## Testing Commands
 
@@ -42,7 +42,7 @@ pytest tests/integration # to run integration tests
 # Run E2E tests using the convenience script
 ./run_e2e_tests.sh
 
-# Or run manually (make sure server is running on port 8001)
+# Or run manually (make sure server is running on port 8000)
 HEADLESS=true python3 -m pytest tests/e2e/test_playwright_simple.py -v
 
 # Run in non-headless mode (visible browser) for debugging

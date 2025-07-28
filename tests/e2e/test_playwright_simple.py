@@ -7,7 +7,7 @@ import time
 class TestE2ECalculatorApp:
     """End-to-end tests for the Calculator web application."""
     
-    BASE_URL = "http://localhost:8001"
+    BASE_URL = "http://localhost:8000"
     
     TEST_USER = {
         "username": "testuser_e2e_simple",
@@ -244,7 +244,7 @@ class TestE2ECalculatorApp:
 class TestE2ECompleteWorkflow:
     """Complete workflow tests."""
     
-    BASE_URL = "http://localhost:8001"
+    BASE_URL = "http://localhost:8000"
     
     def test_complete_user_journey(self, page: Page):
         """Test a complete user journey from homepage to basic interaction."""

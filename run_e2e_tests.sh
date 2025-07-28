@@ -24,7 +24,7 @@ echo "Running Playwright E2E tests..."
 
 # Run the e2e tests with proper environment variables
 HEADLESS=true \
-BASE_URL=http://localhost:8001 \
+BASE_URL=http://localhost:8000 \
 $PYTHON_CMD -m pytest tests/e2e/test_playwright_simple.py -v -s --tb=short
 
 echo "E2E tests completed!"

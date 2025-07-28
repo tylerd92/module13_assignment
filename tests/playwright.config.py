@@ -10,8 +10,8 @@ class PlaywrightConfig:
     """Configuration for Playwright tests."""
     
     # Base URL for the application
-    BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
-    
+    BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+
     # Browser settings
     HEADLESS = os.getenv("HEADLESS", "true").lower() == "true"
     BROWSER = os.getenv("BROWSER", "chromium")
